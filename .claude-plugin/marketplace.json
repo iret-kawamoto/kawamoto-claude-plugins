@@ -1,0 +1,18 @@
+{
+  "name": "kawamoto-claude-plugins",
+  "owner": {
+    "name": "Takeshi Kawamoto",
+    "email": "kawamoto@iret.co.jp"
+  },
+  "plugins": [
+    {
+      "name": "tf-docs-header",
+      "source": "./plugins/tf-docs-header",
+      "description": "Auto append tf-docs header to main.tf",
+      "version": "1.0.0",
+      "author": {
+        "name": "Takeshi Kawamoto"
+      }
+    }
+  ]
+}

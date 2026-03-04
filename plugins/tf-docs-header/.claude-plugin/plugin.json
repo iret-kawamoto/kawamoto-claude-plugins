@@ -1,0 +1,8 @@
+{
+  "name": "tf-docs-header",
+  "description": "Auto append tf-docs header to main.tf",
+  "version": "1.0.0",
+  "author": {
+    "name": "Takeshi Kawamoto"
+  }
+}
