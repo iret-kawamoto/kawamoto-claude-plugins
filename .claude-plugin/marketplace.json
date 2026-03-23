@@ -22,6 +22,15 @@
       "author": {
         "name": "Takeshi Kawamoto"
       }
+    },
+    {
+      "name": "security-audit",
+      "source": "./plugins/security-audit",
+      "description": "Security audit with OWASP Top 10, CVE check, and external tools (checkov/trivy/gitleaks)",
+      "version": "1.0.0",
+      "author": {
+        "name": "Takeshi Kawamoto"
+      }
     }
   ]
 }
