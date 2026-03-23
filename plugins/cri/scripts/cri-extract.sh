@@ -61,7 +61,7 @@ if [ -n "${CLAUDE_TRANSCRIPT:-}" ]; then
 elif [ ! -t 0 ]; then
   TRANSCRIPT="$(cat)"
 else
-  LATEST_JSONL="$(find ~/.claude/projects/ -name '*.jsonl' -type f 2>/dev/null | sort -t/ -k1 | tail -n1)"
+  LATEST_JSONL="$(find ~/.claude/projects/ -name '*.jsonl' -type f -print0 2>/dev/null | xargs -0 ls -1t 2>/dev/null | head -n1)"
   if [ -n "${LATEST_JSONL}" ] && [ -f "${LATEST_JSONL}" ]; then
     TRANSCRIPT="$(tail -n 100 "${LATEST_JSONL}" 2>/dev/null || true)"
   fi
