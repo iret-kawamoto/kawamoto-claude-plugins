@@ -13,6 +13,15 @@
       "author": {
         "name": "Takeshi Kawamoto"
       }
+    },
+    {
+      "name": "cri",
+      "source": "./plugins/cri",
+      "description": "Continuous Rule Improvement - coding rules auto-extraction",
+      "version": "1.0.0",
+      "author": {
+        "name": "Takeshi Kawamoto"
+      }
     }
   ]
 }
