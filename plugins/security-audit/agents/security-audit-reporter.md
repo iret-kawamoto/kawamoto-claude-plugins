@@ -49,7 +49,7 @@ For each finding, generate a unique ID using this formula:
 Where:
 - `<category>`: `iac`, `owasp`, `cve`, or `secret`
 - `<source_identifier>`: the specific check ID (e.g., `CKV_GCP_123`, `A01`, `CVE-2024-12345`, `gitleaks`)
-- `<sha256_first_8>`: first 8 characters of SHA-256 hash of the file path (use a consistent mental hash — the exact algorithm matters less than consistency across runs)
+- `<sha256_first_8>`: first 8 hex characters of the SHA-256 hash of the file path (i.e., `sha256(file_path).slice(0, 8)`). Compute deterministically so IDs are reproducible across runs for ignore-list matching
 
 For findings without a file path, use the package name or a descriptive identifier for the hash input.
 
@@ -68,8 +68,8 @@ Assign severity to each non-ignored finding:
 | Severity | Criteria |
 |---|---|
 | CRITICAL | Exploitable CVE (CVSS >= 9.0), confirmed secret/credential leak, authentication bypass, remote code execution |
-| HIGH | CVE with CVSS 7.0-8.9, broad IAM permissions, encryption failures, OWASP A01 (access control), A02 (crypto), A03 (injection) with confirmed risk |
-| MEDIUM | CVE with CVSS 4.0-6.9, IaC misconfigurations, OWASP A04-A05 findings, best practice deviations with security implications |
+| HIGH | CVE with CVSS 7.0-8.9, broad IAM permissions, encryption failures, OWASP A01 (broken access control), A04 (cryptographic failures), A05 (injection) with confirmed risk |
+| MEDIUM | CVE with CVSS 4.0-6.9, IaC misconfigurations, OWASP A02 (security misconfiguration), A03 (supply chain), A06-A10 findings, best practice deviations with security implications |
 | LOW | CVE with CVSS < 4.0, minor configuration improvements, informational IaC checks |
 | INFO | Potential issues that need manual review, patterns that may be false positives, recommendations |
 
