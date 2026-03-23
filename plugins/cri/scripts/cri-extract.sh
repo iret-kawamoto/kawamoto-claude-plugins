@@ -72,11 +72,31 @@ if [ -z "${TRANSCRIPT}" ]; then
 fi
 
 # --- LLM 分析 ---
-CURRENT_CANDIDATES="$(cat "${CANDIDATES_FILE}")"
+# プレースホルダー置換は awk + ENVIRON 経由で行う。
+# bash の ${//} は replacement 中の / & が特殊扱いされて危険。
+# awk -v も \n 等のバックスラッシュエスケープが解釈されるため不適。
+# ENVIRON[] はバイト列をそのまま渡すので安全。
+# gsub の & 展開を避けるため、split+join パターンで置換する。
+export CRI_CURRENT_CANDIDATES="$(cat "${CANDIDATES_FILE}")"
+export CRI_TRANSCRIPT="${TRANSCRIPT}"
 
-PROMPT="$(cat "${PROMPT_FILE}")"
-PROMPT="${PROMPT/\{\{CURRENT_CANDIDATES\}\}/${CURRENT_CANDIDATES}}"
-PROMPT="${PROMPT/\{\{TRANSCRIPT\}\}/${TRANSCRIPT}}"
+PROMPT="$(awk '
+  function safe_replace(str, placeholder, value,    n, parts, i, result) {
+    n = split(str, parts, placeholder)
+    if (n == 1) return str
+    result = parts[1]
+    for (i = 2; i <= n; i++) result = result value parts[i]
+    return result
+  }
+  {
+    line = $0
+    line = safe_replace(line, "{{CURRENT_CANDIDATES}}", ENVIRON["CRI_CURRENT_CANDIDATES"])
+    line = safe_replace(line, "{{TRANSCRIPT}}", ENVIRON["CRI_TRANSCRIPT"])
+    print line
+  }
+' "${PROMPT_FILE}")"
+
+unset CRI_CURRENT_CANDIDATES CRI_TRANSCRIPT
 
 OUTPUT="$(claude -p "${PROMPT}" --no-tools 2>/dev/null || true)"
 
