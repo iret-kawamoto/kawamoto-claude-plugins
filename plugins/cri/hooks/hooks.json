@@ -1,0 +1,36 @@
+{
+  "hooks": {
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/cri-extract.sh\"",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/cri-extract.sh\"",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -e '.candidates[] | select(.occurrences >= 3)' \"$CLAUDE_PROJECT_DIR/.claude/tmp/cri-candidates.json\" > /dev/null 2>&1 && echo -e '\\n\\033[33m💡 新しいルール候補が蓄積されています。「ルールをレビューして」と指示するか、/cri-review を実行してください。\\033[0m' || true"
+          }
+        ]
+      }
+    ]
+  }
+}
