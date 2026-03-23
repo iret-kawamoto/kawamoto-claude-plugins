@@ -7,6 +7,7 @@ Takeshi Kawamoto が作成した Claude Code プラグイン集。
 | Plugin | Description |
 |--------|-------------|
 | [cri](./plugins/cri) | コーディング規約の自動抽出・統合（Continuous Rule Improvement） |
+| [security-audit](./plugins/security-audit) | OWASP Top 10・CVE・外部ツール連携によるセキュリティ監査 |
 | [tf-docs-header](./plugins/tf-docs-header) | Terraform の `main.tf` に terraform-docs ヘッダを自動付与・更新 |
 
 ## Installation
