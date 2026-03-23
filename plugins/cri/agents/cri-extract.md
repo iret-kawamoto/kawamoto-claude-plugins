@@ -30,7 +30,7 @@ color: yellow
 
 ### 2. プロンプトの準備
 
-`.claude/prompts/cri-extract-prompt.md` を読み込む。
+`${CLAUDE_PLUGIN_ROOT}/prompts/cri-extract-prompt.md` を読み込む。
 プロンプト内の `{{CURRENT_CANDIDATES}}` を現在の `cri-candidates.json` の内容で置換する。
 プロンプト内の `{{TRANSCRIPT}}` を入力トランスクリプトで置換する。
 
