@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # CRI バックグラウンド抽出スクリプト
 # Plugin hooks/hooks.json から呼び出される
+#
+# PreCompact と SessionEnd の両方から async で呼ばれるため、
+# mkdir ベースのロックで同時実行を排他制御する。
 
 set -euo pipefail
 
@@ -13,20 +16,38 @@ PROMPT_FILE="${PLUGIN_ROOT}/prompts/cri-extract-prompt.md"
 CANDIDATES_FILE="${PROJECT_ROOT}/.claude/tmp/cri-candidates.json"
 TMP_DIR="${PROJECT_ROOT}/.claude/tmp"
 
-# .claude/tmp/ ディレクトリが無ければ作成
+# --- 排他制御 ---
+# mkdir はアトミックなので、ロックディレクトリの作成を競合検出に使う。
+# macOS に flock は無いため、ポータブルな mkdir 方式を採用。
+LOCKDIR="${TMP_DIR}/.cri-extract.lock"
+STALE_THRESHOLD=300  # 5分（LLM呼び出しのタイムアウト目安）
+
+# ステールロック検出: STALE_THRESHOLD 秒以上古いロックは前プロセスのクラッシュとみなして除去
+if [ -d "${LOCKDIR}" ]; then
+  lock_age=$(( $(date +%s) - $(stat -f %m "${LOCKDIR}" 2>/dev/null || stat -c %Y "${LOCKDIR}" 2>/dev/null || echo 0) ))
+  if [ "${lock_age}" -gt "${STALE_THRESHOLD}" ]; then
+    rmdir "${LOCKDIR}" 2>/dev/null || true
+  fi
+fi
+
+# 非ブロッキングでロック取得を試行。失敗時は別インスタンスが実行中なのでスキップ。
+if ! mkdir "${LOCKDIR}" 2>/dev/null; then
+  exit 0
+fi
+trap 'rmdir "${LOCKDIR}" 2>/dev/null' EXIT
+
+# --- 初期化 ---
 mkdir -p "${TMP_DIR}"
 
-# cri-candidates.json が無ければ初期化
 if [ ! -f "${CANDIDATES_FILE}" ]; then
   echo '{"candidates":[]}' > "${CANDIDATES_FILE}"
 fi
 
-# プロンプトファイルの存在確認
 if [ ! -f "${PROMPT_FILE}" ]; then
   exit 0
 fi
 
-# トランスクリプトの取得
+# --- トランスクリプト取得 ---
 # 優先順位: $CLAUDE_TRANSCRIPT 環境変数 → stdin → ~/.claude/projects/ 配下の最新 JSONL
 TRANSCRIPT=""
 
@@ -35,35 +56,32 @@ if [ -n "${CLAUDE_TRANSCRIPT:-}" ]; then
 elif [ ! -t 0 ]; then
   TRANSCRIPT="$(cat)"
 else
-  # ~/.claude/projects/ 配下の最新 JSONL をフォールバックで使用
   LATEST_JSONL="$(find ~/.claude/projects/ -name '*.jsonl' -type f 2>/dev/null | sort -t/ -k1 | tail -n1)"
   if [ -n "${LATEST_JSONL}" ] && [ -f "${LATEST_JSONL}" ]; then
     TRANSCRIPT="$(tail -n 100 "${LATEST_JSONL}" 2>/dev/null || true)"
   fi
 fi
 
-# トランスクリプトが空の場合はスキップ
 if [ -z "${TRANSCRIPT}" ]; then
   exit 0
 fi
 
-# 現在の候補JSONを読み込む
+# --- LLM 分析 ---
 CURRENT_CANDIDATES="$(cat "${CANDIDATES_FILE}")"
 
-# プロンプトを構築（プレースホルダーを置換）
 PROMPT="$(cat "${PROMPT_FILE}")"
 PROMPT="${PROMPT/\{\{CURRENT_CANDIDATES\}\}/${CURRENT_CANDIDATES}}"
 PROMPT="${PROMPT/\{\{TRANSCRIPT\}\}/${TRANSCRIPT}}"
 
-# LLM を呼び出して分析（バッチモード・ツールなし）
 OUTPUT="$(claude -p "${PROMPT}" --no-tools 2>/dev/null || true)"
 
-# 出力が空の場合はスキップ
 if [ -z "${OUTPUT}" ]; then
   exit 0
 fi
 
-# 出力が valid JSON かつ .candidates キーを持つ場合のみ上書き
+# --- 原子的書き込み ---
+# tmpファイルに書いてから mv で差し替え。途中クラッシュでの部分書き込みを防止。
 if echo "${OUTPUT}" | jq -e '.candidates' > /dev/null 2>&1; then
-  echo "${OUTPUT}" > "${CANDIDATES_FILE}"
+  echo "${OUTPUT}" > "${CANDIDATES_FILE}.tmp"
+  mv "${CANDIDATES_FILE}.tmp" "${CANDIDATES_FILE}"
 fi
