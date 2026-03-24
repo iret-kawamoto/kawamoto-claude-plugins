@@ -660,7 +660,8 @@ main "$@"
 ### 10.1 戻り値のチェック
 
 - すべてのコマンドの戻り値を確認する
-- パイプラインでは `PIPESTATUS` 配列を使用する
+- パイプラインでは `if` 文で全体の成否を判定するか、`PIPESTATUS` 配列で個別にチェックする
+- `set -euo pipefail` 環境下ではパイプライン失敗時に即終了するため、`PIPESTATUS` を使う場合は一時的に `set +e` する必要がある
 
 ```bash
 # if 文でチェック
@@ -669,9 +670,18 @@ if ! mv "${file_list[@]}" "${dest_dir}/"; then
   exit 1
 fi
 
-# パイプラインの各コマンドをチェック
+# パイプライン全体を if 文でチェック（シンプルな方法）
+if ! tar -cf - ./* | ( cd "${dir}" && tar -xf - ); then
+  err "tar の作成または展開に失敗"
+  exit 1
+fi
+
+# パイプラインの各コマンドを個別にチェック（PIPESTATUS 使用時）
+# set -euo pipefail 下では失敗時に即終了するため、一時的に無効化する
+set +e
 tar -cf - ./* | ( cd "${dir}" && tar -xf - )
 return_codes=("${PIPESTATUS[@]}")
+set -e
 if (( return_codes[0] != 0 )); then
   err "tar の作成に失敗"
 fi
